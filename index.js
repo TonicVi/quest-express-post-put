@@ -78,6 +78,40 @@ app.post(
   },
 );
 
+app.put(
+  '/api/users/:id',
+  userValidationMiddlewares,
+  (req, res) => {
+    const errors = validationResult(req);
+    const formData = req.body;
+    const { id } = req.params;
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
+    return connection.query(`UPDATE user SET ? WHERE id = ${id} `, [formData], (err) => {
+      if (err) {
+        return res.status(500).json({
+          error: err.message,
+          sql: err.sql,
+        });
+      }
+      return connection.query(`SELECT * FROM user WHERE id = ${id}`, (err2, records) => {
+        if (err2) {
+          return res.status(500).json({
+            error: err2.message,
+            sql: err2.sql,
+          });
+        }
+        const insertedData = records[0];
+        const { password, ...user } = insertedData;
+        return res
+          .status(200)
+          .json(user);
+      });
+    });
+  },
+);
+
 app.listen(process.env.PORT, (err) => {
   if (err) {
     throw new Error('Something bad happened...');
